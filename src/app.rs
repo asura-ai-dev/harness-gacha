@@ -152,6 +152,17 @@ impl App {
     fn handle_screen_action(&mut self, action: Action) {
         match self.current_screen {
             Screen::Catalog => self.handle_catalog_action(action),
+            Screen::PackDetail => match action {
+                Action::OpenSafety => self.navigate_to(Screen::SafetyDetail),
+                Action::OpenPurchase => self.navigate_to(Screen::Purchase),
+                Action::Up => {
+                    self.scroll_offset = self.scroll_offset.saturating_sub(1);
+                }
+                Action::Down => {
+                    self.scroll_offset = self.scroll_offset.saturating_add(1);
+                }
+                _ => {}
+            },
             _ => {}
         }
     }
@@ -203,6 +214,46 @@ impl App {
             }
             Action::OpenHelp => {
                 self.navigate_to(Screen::Help);
+            }
+            Action::Search => {
+                self.search_active = !self.search_active;
+                if !self.search_active {
+                    self.refresh_filtered_ids();
+                }
+            }
+            Action::SearchInput(c) => {
+                if self.search_active {
+                    self.search_query.push(c);
+                    self.refresh_filtered_ids();
+                }
+            }
+            Action::SearchBackspace => {
+                if self.search_active {
+                    self.search_query.pop();
+                    self.refresh_filtered_ids();
+                }
+            }
+            Action::ToggleTag => {
+                let tags = crate::data::catalog::all_tags(&self.catalog);
+                if tags.is_empty() {
+                    return;
+                }
+                self.catalog_state.active_tag = match &self.catalog_state.active_tag {
+                    None => Some(tags[0].clone()),
+                    Some(current) => {
+                        if let Some(pos) = tags.iter().position(|t| t == current) {
+                            if pos + 1 < tags.len() {
+                                Some(tags[pos + 1].clone())
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    }
+                };
+                self.catalog_state.selected_index = 0;
+                self.refresh_filtered_ids();
             }
             _ => {}
         }

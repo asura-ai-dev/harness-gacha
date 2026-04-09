@@ -15,6 +15,8 @@ pub fn render(frame: &mut Frame, app: &App) {
 
     match app.current_screen {
         Screen::Catalog => catalog::render(frame, app, &theme),
+        Screen::PackDetail => super::pack_detail::render(frame, app, &theme),
+        Screen::Help => super::help::render(frame, app, &theme),
         other => {
             let text = format!("{:?} - Coming Soon\n\nPress b or Esc to go back", other);
             let p = Paragraph::new(text)
