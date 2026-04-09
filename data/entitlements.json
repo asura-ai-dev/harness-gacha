@@ -1,0 +1,20 @@
+{
+  "user_id": "local-user",
+  "entitlements": [
+    {
+      "pack_id": "team-review-pack",
+      "purchased_at": "2026-04-05T10:00:00Z",
+      "version_at_purchase": "1.0.0",
+      "status": "active",
+      "installed": true,
+      "installed_version": "1.0.0"
+    },
+    {
+      "pack_id": "frontend-spec-kit",
+      "purchased_at": "2026-04-08T14:30:00Z",
+      "version_at_purchase": "1.0.0",
+      "status": "active",
+      "installed": false
+    }
+  ]
+}

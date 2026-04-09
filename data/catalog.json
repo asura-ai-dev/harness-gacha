@@ -1,0 +1,174 @@
+[
+  {
+    "id": "team-review-pack",
+    "name": "Team Review Pack",
+    "version": "1.0.0",
+    "summary": "コードレビュー向けの hooks と skill をまとめた pack",
+    "author": {
+      "name": "Example Creator",
+      "url": "https://example.com"
+    },
+    "targets": [
+      {
+        "tool": "claude-code",
+        "version_range": ">=1.0.0"
+      },
+      {
+        "tool": "codex",
+        "version_range": ">=0.9.0"
+      }
+    ],
+    "contents_summary": {
+      "skills": 3,
+      "hooks": 2,
+      "templates": 4,
+      "other": 0
+    },
+    "permissions": {
+      "shell": true,
+      "network": false,
+      "filesystem_read": true,
+      "filesystem_write": true,
+      "git": false
+    },
+    "install": {
+      "method": "script",
+      "entrypoint": "install.sh",
+      "steps": [
+        "chmod +x install.sh",
+        "./install.sh"
+      ]
+    },
+    "license": {
+      "type": "commercial",
+      "text_url": "https://example.com/license"
+    },
+    "tags": [
+      "review",
+      "team",
+      "typescript"
+    ],
+    "risks": [
+      "hooks が作業ディレクトリ内のファイルを書き換える"
+    ],
+    "price": 1800,
+    "status": "listed",
+    "featured": true,
+    "listed_at": "2026-03-15T10:00:00Z",
+    "updated_at": "2026-04-10T08:00:00Z",
+    "sample_preview": "PR review の際は、変更の意図と回帰リスクを先に確認します",
+    "checkout_url": "https://buy.stripe.com/example_team-review-pack"
+  },
+  {
+    "id": "frontend-spec-kit",
+    "name": "Frontend Spec Kit",
+    "version": "1.1.0",
+    "summary": "フロントエンド実装前の仕様整理に使うテンプレートと skill をまとめた pack",
+    "author": {
+      "name": "Example Creator",
+      "url": "https://example.com/frontend-spec-kit"
+    },
+    "targets": [
+      {
+        "tool": "claude-code",
+        "version_range": ">=1.0.0"
+      }
+    ],
+    "contents_summary": {
+      "skills": 2,
+      "hooks": 0,
+      "templates": 5,
+      "other": 1
+    },
+    "permissions": {
+      "shell": false,
+      "network": false,
+      "filesystem_read": true,
+      "filesystem_write": false,
+      "git": false
+    },
+    "install": {
+      "method": "manual",
+      "steps": [
+        "templates/frontend-spec/ を確認する",
+        "必要なテンプレートをプロジェクトへコピーする"
+      ]
+    },
+    "license": {
+      "type": "commercial",
+      "text_url": "https://example.com/frontend-spec-kit/license"
+    },
+    "tags": [
+      "frontend",
+      "spec",
+      "react"
+    ],
+    "risks": [
+      "既存の UI ガイドラインと差分がある場合は手動調整が必要"
+    ],
+    "price": 1200,
+    "status": "listed",
+    "featured": true,
+    "listed_at": "2026-03-20T09:30:00Z",
+    "updated_at": "2026-04-09T12:00:00Z",
+    "sample_preview": "フロントエンド実装前にコンポーネント仕様を整理します",
+    "checkout_url": "https://buy.stripe.com/example_frontend-spec-kit"
+  },
+  {
+    "id": "bug-triage-starter",
+    "name": "Bug Triage Starter",
+    "version": "0.9.0",
+    "summary": "バグ調査の初動を標準化する hooks とワークフローをまとめた pack",
+    "author": {
+      "name": "Example Creator",
+      "url": "https://example.com/bug-triage-starter"
+    },
+    "targets": [
+      {
+        "tool": "codex",
+        "version_range": ">=0.9.0"
+      }
+    ],
+    "contents_summary": {
+      "skills": 1,
+      "hooks": 3,
+      "templates": 2,
+      "other": 0
+    },
+    "permissions": {
+      "shell": true,
+      "network": true,
+      "filesystem_read": true,
+      "filesystem_write": true,
+      "git": true
+    },
+    "install": {
+      "method": "script",
+      "entrypoint": "bootstrap.sh",
+      "steps": [
+        "chmod +x bootstrap.sh",
+        "./bootstrap.sh --init"
+      ]
+    },
+    "license": {
+      "type": "commercial",
+      "text_url": "https://example.com/bug-triage-starter/license"
+    },
+    "tags": [
+      "bug",
+      "triage",
+      "workflow"
+    ],
+    "risks": [
+      "network 権限により外部 issue tracker と通信する可能性がある",
+      "git 権限により自動で作業ブランチを作成する可能性がある"
+    ],
+    "price": 1500,
+    "status": "listed",
+    "featured": false,
+    "listed_at": "2026-04-01T07:45:00Z",
+    "updated_at": "2026-04-10T07:00:00Z",
+    "sample_preview": "バグ報告を受けたら、再現手順と影響範囲を先に特定します",
+    "checkout_url": "https://buy.stripe.com/example_bug-triage-starter"
+  }
+]
