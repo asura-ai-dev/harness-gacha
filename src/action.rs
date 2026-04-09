@@ -1,1 +1,25 @@
-
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Action {
+    Quit,
+    Back,
+    Enter,
+    Up,
+    Down,
+    Left,
+    Right,
+    Tab,
+    BackTab,
+    Search,
+    SearchInput(char),
+    SearchBackspace,
+    ToggleTag,
+    ToggleDiscovery,
+    OpenLibrary,
+    OpenHelp,
+    OpenSafety,
+    OpenPurchase,
+    OpenCheckout,
+    CopyUrl,
+    Tick,
+    None,
+}
