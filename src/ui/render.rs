@@ -1,11 +1,10 @@
 use ratatui::prelude::*;
-use ratatui::widgets::Paragraph;
 
 use crate::app::App;
 use crate::screen::Screen;
 use crate::ui::theme::cherry_cartridge;
 
-use super::{catalog, discovery, library, purchase, safety_detail};
+use super::{catalog, discovery, install_detail, library, purchase, safety_detail};
 
 pub fn render(frame: &mut Frame, app: &App) {
     let theme = cherry_cartridge();
@@ -20,13 +19,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         Screen::PackDetail => super::pack_detail::render(frame, app, &theme),
         Screen::SafetyDetail => safety_detail::render(frame, app, &theme),
         Screen::Purchase => purchase::render(frame, app, &theme),
+        Screen::InstallDetail => install_detail::render(frame, app, &theme),
         Screen::Help => super::help::render(frame, app, &theme),
-        other => {
-            let text = format!("{:?} - Coming Soon\n\nPress b or Esc to go back", other);
-            let p = Paragraph::new(text)
-                .style(theme.text_style())
-                .alignment(Alignment::Center);
-            frame.render_widget(p, frame.area());
-        }
     }
 }

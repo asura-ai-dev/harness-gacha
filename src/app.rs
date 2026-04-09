@@ -149,7 +149,15 @@ impl App {
     pub fn update(&mut self, action: Action) {
         match action {
             Action::Quit => self.running = false,
-            Action::Back => self.go_back(),
+            Action::Back => {
+                if self.current_screen == Screen::Discovery {
+                    if let DiscoveryState::Animating { .. } = &self.discovery_state {
+                        return;
+                    }
+                    self.discovery_state = DiscoveryState::Idle;
+                }
+                self.go_back();
+            }
             Action::Tick => {
                 self.tick_count += 1;
                 if self
@@ -207,6 +215,15 @@ impl App {
                             }
                         }
                     }
+                }
+                _ => {}
+            },
+            Screen::InstallDetail => match action {
+                Action::Up => {
+                    self.scroll_offset = self.scroll_offset.saturating_sub(1);
+                }
+                Action::Down => {
+                    self.scroll_offset = self.scroll_offset.saturating_add(1);
                 }
                 _ => {}
             },
@@ -341,11 +358,15 @@ impl App {
         match action {
             Action::Enter => match &self.discovery_state {
                 DiscoveryState::Idle => self.start_discovery_animation(),
+                DiscoveryState::Animating { target_pack_id, .. } => {
+                    self.discovery_state = DiscoveryState::Result {
+                        pack_id: target_pack_id.clone(),
+                    };
+                }
                 DiscoveryState::Result { pack_id } => {
                     self.selected_pack_id = Some(pack_id.clone());
                     self.navigate_to(Screen::PackDetail);
                 }
-                DiscoveryState::Animating { .. } => {}
             },
             Action::ToggleDiscovery => self.start_discovery_animation(),
             Action::Tick => {
