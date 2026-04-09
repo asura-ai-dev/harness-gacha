@@ -4,6 +4,7 @@
     "name": "Team Review Pack",
     "version": "1.0.0",
     "summary": "コードレビュー向けの hooks と skill をまとめた pack",
+    "description": "レビュー観点のテンプレート、差分確認 hooks、チーム向けの進行メモを束ねた pack。変更意図の確認から回帰リスク整理までを一貫して支援する。",
     "author": {
       "name": "Example Creator",
       "url": "https://example.com"
@@ -57,13 +58,15 @@
     "listed_at": "2026-03-15T10:00:00Z",
     "updated_at": "2026-04-10T08:00:00Z",
     "sample_preview": "PR review の際は、変更の意図と回帰リスクを先に確認します",
-    "checkout_url": "https://buy.stripe.com/example_team-review-pack"
+    "checkout_url": "https://buy.stripe.com/example_team-review-pack",
+    "review_notes": "hooks は有効だが network と git を使わない構成で、ローカル中心のレビュー支援に寄せている。"
   },
   {
     "id": "frontend-spec-kit",
     "name": "Frontend Spec Kit",
     "version": "1.1.0",
     "summary": "フロントエンド実装前の仕様整理に使うテンプレートと skill をまとめた pack",
+    "description": "画面要件、状態遷移、アクセシビリティ観点を先に書き出すための spec pack。UI 実装前の認識合わせを短時間で回しやすくする。",
     "author": {
       "name": "Example Creator",
       "url": "https://example.com/frontend-spec-kit"
@@ -112,13 +115,15 @@
     "listed_at": "2026-03-20T09:30:00Z",
     "updated_at": "2026-04-09T12:00:00Z",
     "sample_preview": "フロントエンド実装前にコンポーネント仕様を整理します",
-    "checkout_url": "https://buy.stripe.com/example_frontend-spec-kit"
+    "checkout_url": "https://buy.stripe.com/example_frontend-spec-kit",
+    "review_notes": "テンプレート中心のため導入は読み取り主体で、安全性は比較的高い。"
   },
   {
     "id": "bug-triage-starter",
     "name": "Bug Triage Starter",
     "version": "0.9.0",
     "summary": "バグ調査の初動を標準化する hooks とワークフローをまとめた pack",
+    "description": "再現確認、ログ収集、一次切り分けを素早く始めるための調査 pack。シェルと git を使うため、権限面の確認を前提に導入する。",
     "author": {
       "name": "Example Creator",
       "url": "https://example.com/bug-triage-starter"
@@ -169,6 +174,121 @@
     "listed_at": "2026-04-01T07:45:00Z",
     "updated_at": "2026-04-10T07:00:00Z",
     "sample_preview": "バグ報告を受けたら、再現手順と影響範囲を先に特定します",
-    "checkout_url": "https://buy.stripe.com/example_bug-triage-starter"
+    "checkout_url": "https://buy.stripe.com/example_bug-triage-starter",
+    "review_notes": "network と git を使うため利便性は高いが、導入前に実行ポリシーを確認したい。"
+  },
+  {
+    "id": "release-note-helper",
+    "name": "Release Note Helper",
+    "version": "1.0.0",
+    "summary": "リリースノート作成を補助する templates と read-only skill をまとめた pack",
+    "description": "変更履歴の要約、破壊的変更の洗い出し、公開文面の下書きを支援する documentation pack。read-only 前提で既存ファイルを参照し、配布文面を整える用途に向く。",
+    "author": {
+      "name": "Docs Forge",
+      "url": "https://example.com/release-note-helper"
+    },
+    "targets": [
+      {
+        "tool": "claude-code",
+        "version_range": ">=1.0.0"
+      }
+    ],
+    "contents_summary": {
+      "skills": 1,
+      "hooks": 1,
+      "templates": 3,
+      "other": 0
+    },
+    "permissions": {
+      "shell": false,
+      "network": false,
+      "filesystem_read": true,
+      "filesystem_write": false,
+      "git": false
+    },
+    "install": {
+      "method": "manual",
+      "steps": [
+        "templates/release-notes/ を確認する",
+        "skill を読み込み、対象 diff と changelog を参照して文面を生成する"
+      ]
+    },
+    "license": {
+      "type": "commercial",
+      "text_url": "https://example.com/release-note-helper/license"
+    },
+    "tags": [
+      "release",
+      "documentation"
+    ],
+    "price": 900,
+    "status": "listed",
+    "featured": false,
+    "listed_at": "2026-04-08T03:20:00Z",
+    "updated_at": "2026-04-10T08:40:00Z",
+    "sample_preview": "変更点を利用者向けの短い告知文へ整理します",
+    "checkout_url": "https://buy.stripe.com/example_release-note-helper",
+    "review_notes": "filesystem_read のみを使う read-only pack で、安全性確認がしやすい。"
+  },
+  {
+    "id": "handoff-pack",
+    "name": "Handoff Pack",
+    "version": "1.0.0",
+    "summary": "セッション handoff と引き継ぎ記録を整える workflow pack",
+    "description": "Codex と claude-code の両方で使える handoff 用 skill、テンプレート、補助 hook をまとめた pack。作業状況、判断、未解決事項を一定の型で残し、次の担当者がすぐ再開できる状態を作る。",
+    "author": {
+      "name": "Relay Works",
+      "url": "https://example.com/handoff-pack"
+    },
+    "targets": [
+      {
+        "tool": "claude-code",
+        "version_range": ">=1.0.0"
+      },
+      {
+        "tool": "codex",
+        "version_range": ">=0.9.0"
+      }
+    ],
+    "contents_summary": {
+      "skills": 2,
+      "hooks": 1,
+      "templates": 3,
+      "other": 1
+    },
+    "permissions": {
+      "shell": false,
+      "network": false,
+      "filesystem_read": true,
+      "filesystem_write": true,
+      "git": false
+    },
+    "install": {
+      "method": "manual",
+      "steps": [
+        "templates/handoff/ を確認する",
+        "skill を有効にしてプロジェクトの handoff パスへテンプレートを展開する"
+      ]
+    },
+    "license": {
+      "type": "commercial",
+      "text_url": "https://example.com/handoff-pack/license"
+    },
+    "tags": [
+      "handoff",
+      "team",
+      "workflow"
+    ],
+    "risks": [
+      "filesystem_write 権限で handoff ファイルを追記するため、出力先ディレクトリの運用ルール確認が必要"
+    ],
+    "price": 1300,
+    "status": "listed",
+    "featured": true,
+    "listed_at": "2026-04-09T05:10:00Z",
+    "updated_at": "2026-04-10T08:42:00Z",
+    "sample_preview": "次の担当者が 5 分で再開できる handoff を残します",
+    "checkout_url": "https://buy.stripe.com/example_handoff-pack",
+    "review_notes": "filesystem_write は使うが shell・network・git は無効で、リスクは低めに抑えている。"
   }
 ]
