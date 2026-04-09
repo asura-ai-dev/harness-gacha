@@ -1,5 +1,6 @@
 use crate::action::Action;
 use crate::data::{accounting, catalog, entitlement};
+use crate::discovery::pick_random_pack;
 use crate::models::{AccountingData, CatalogEntry, EntitlementStore};
 use crate::screen::Screen;
 use std::path::Path;
@@ -47,6 +48,7 @@ pub struct App {
     pub tick_count: u64,
     pub scroll_offset: u16,
     pub message: Option<String>,
+    pub message_clear_at: Option<u64>,
 }
 
 impl App {
@@ -60,7 +62,10 @@ impl App {
             .map(|p| p.id.clone())
             .collect();
         let message = if catalog.is_empty() {
-            Some("カタログデータが見つかりません。data/catalog.json を確認してください。".to_string())
+            Some(
+                "カタログデータが見つかりません。data/catalog.json を確認してください。"
+                    .to_string(),
+            )
         } else {
             None
         };
@@ -85,6 +90,7 @@ impl App {
             tick_count: 0,
             scroll_offset: 0,
             message,
+            message_clear_at: None,
         }
     }
 
@@ -144,7 +150,17 @@ impl App {
         match action {
             Action::Quit => self.running = false,
             Action::Back => self.go_back(),
-            Action::Tick => self.tick_count += 1,
+            Action::Tick => {
+                self.tick_count += 1;
+                if self
+                    .message_clear_at
+                    .is_some_and(|clear_at| self.tick_count >= clear_at)
+                {
+                    self.message = None;
+                    self.message_clear_at = None;
+                }
+                self.handle_screen_action(Action::Tick);
+            }
             _ => self.handle_screen_action(action),
         }
     }
@@ -152,6 +168,8 @@ impl App {
     fn handle_screen_action(&mut self, action: Action) {
         match self.current_screen {
             Screen::Catalog => self.handle_catalog_action(action),
+            Screen::Discovery => self.handle_discovery_action(action),
+            Screen::Library => self.handle_library_action(action),
             Screen::PackDetail => match action {
                 Action::OpenSafety => self.navigate_to(Screen::SafetyDetail),
                 Action::OpenPurchase => self.navigate_to(Screen::Purchase),
@@ -163,6 +181,65 @@ impl App {
                 }
                 _ => {}
             },
+            Screen::SafetyDetail => match action {
+                Action::OpenPurchase => self.navigate_to(Screen::Purchase),
+                _ => {}
+            },
+            Screen::Purchase => match action {
+                Action::Enter => {
+                    if let Some(id) = &self.selected_pack_id {
+                        if let Some(pack) = crate::data::catalog::find_pack_by_id(&self.catalog, id)
+                        {
+                            match crate::browser::open_url(&pack.checkout_url) {
+                                Ok(_) => self.set_temporary_message("ブラウザを起動しました"),
+                                Err(error) => self.set_temporary_message(error),
+                            }
+                        }
+                    }
+                }
+                Action::CopyUrl => {
+                    if let Some(id) = &self.selected_pack_id {
+                        if let Some(pack) = crate::data::catalog::find_pack_by_id(&self.catalog, id)
+                        {
+                            match crate::clipboard::copy_to_clipboard(&pack.checkout_url) {
+                                Ok(_) => self.set_temporary_message("URL をコピーしました"),
+                                Err(error) => self.set_temporary_message(error),
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
+    fn handle_library_action(&mut self, action: Action) {
+        match action {
+            Action::Up => {
+                if self.library_state.selected_index > 0 {
+                    self.library_state.selected_index -= 1;
+                }
+            }
+            Action::Down => {
+                let max = self.active_entitlement_count().saturating_sub(1);
+                if self.library_state.selected_index < max {
+                    self.library_state.selected_index += 1;
+                }
+            }
+            Action::Enter => {
+                let selected_pack_id = {
+                    let active = entitlement::active_entitlements(&self.entitlements);
+                    active
+                        .get(self.library_state.selected_index)
+                        .map(|ent| ent.pack_id.clone())
+                };
+
+                if let Some(pack_id) = selected_pack_id {
+                    self.selected_pack_id = Some(pack_id);
+                    self.navigate_to(Screen::InstallDetail);
+                }
+            }
             _ => {}
         }
     }
@@ -207,6 +284,7 @@ impl App {
                 }
             }
             Action::ToggleDiscovery => {
+                self.discovery_state = DiscoveryState::Idle;
                 self.navigate_to(Screen::Discovery);
             }
             Action::OpenLibrary => {
@@ -257,5 +335,60 @@ impl App {
             }
             _ => {}
         }
+    }
+
+    fn handle_discovery_action(&mut self, action: Action) {
+        match action {
+            Action::Enter => match &self.discovery_state {
+                DiscoveryState::Idle => self.start_discovery_animation(),
+                DiscoveryState::Result { pack_id } => {
+                    self.selected_pack_id = Some(pack_id.clone());
+                    self.navigate_to(Screen::PackDetail);
+                }
+                DiscoveryState::Animating { .. } => {}
+            },
+            Action::ToggleDiscovery => self.start_discovery_animation(),
+            Action::Tick => {
+                if let DiscoveryState::Animating {
+                    frame,
+                    target_pack_id,
+                } = &self.discovery_state
+                {
+                    let next_frame = frame.saturating_add(1);
+                    if next_frame >= crate::ui::widgets::capsule_machine::TOTAL_FRAMES {
+                        self.discovery_state = DiscoveryState::Result {
+                            pack_id: target_pack_id.clone(),
+                        };
+                    } else {
+                        self.discovery_state = DiscoveryState::Animating {
+                            frame: next_frame,
+                            target_pack_id: target_pack_id.clone(),
+                        };
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn active_entitlement_count(&self) -> usize {
+        entitlement::active_entitlements(&self.entitlements).len()
+    }
+
+    fn start_discovery_animation(&mut self) {
+        if let Some(pack_id) = pick_random_pack(&self.catalog) {
+            self.discovery_state = DiscoveryState::Animating {
+                frame: 0,
+                target_pack_id: pack_id,
+            };
+        } else {
+            self.discovery_state = DiscoveryState::Idle;
+            self.message = Some("表示可能な pack がありません。".to_string());
+        }
+    }
+
+    fn set_temporary_message(&mut self, message: impl Into<String>) {
+        self.message = Some(message.into());
+        self.message_clear_at = Some(self.tick_count + 8);
     }
 }
