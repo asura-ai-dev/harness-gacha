@@ -1,5 +1,8 @@
 .DS_Store
 
+.claude/
+.superset/
+
 .env
 .env.*
 
