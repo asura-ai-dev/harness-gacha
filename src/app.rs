@@ -59,6 +59,11 @@ impl App {
             .filter(|p| p.featured && p.status == "listed")
             .map(|p| p.id.clone())
             .collect();
+        let message = if catalog.is_empty() {
+            Some("カタログデータが見つかりません。data/catalog.json を確認してください。".to_string())
+        } else {
+            None
+        };
         App {
             running: true,
             current_screen: Screen::Catalog,
@@ -79,7 +84,7 @@ impl App {
             search_active: false,
             tick_count: 0,
             scroll_offset: 0,
-            message: None,
+            message,
         }
     }
 

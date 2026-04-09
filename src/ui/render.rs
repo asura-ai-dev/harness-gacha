@@ -1,20 +1,26 @@
-use crate::app::App;
-use crate::ui::theme::cherry_cartridge;
 use ratatui::prelude::*;
 use ratatui::widgets::Paragraph;
 
+use crate::app::App;
+use crate::screen::Screen;
+use crate::ui::theme::cherry_cartridge;
+
+use super::catalog;
+
 pub fn render(frame: &mut Frame, app: &App) {
     let theme = cherry_cartridge();
-    let area = frame.area();
 
     let bg = ratatui::widgets::Block::default().style(Style::default().bg(theme.primary_bg));
-    frame.render_widget(bg, area);
+    frame.render_widget(bg, frame.area());
 
-    let text = format!(
-        "harness-gacha - {:?}\nPacks: {}\nPress q to quit",
-        app.current_screen,
-        app.catalog.len()
-    );
-    let paragraph = Paragraph::new(text).style(theme.text_style());
-    frame.render_widget(paragraph, area);
+    match app.current_screen {
+        Screen::Catalog => catalog::render(frame, app, &theme),
+        other => {
+            let text = format!("{:?} - Coming Soon\n\nPress b or Esc to go back", other);
+            let p = Paragraph::new(text)
+                .style(theme.text_style())
+                .alignment(Alignment::Center);
+            frame.render_widget(p, frame.area());
+        }
+    }
 }
