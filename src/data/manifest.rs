@@ -10,8 +10,8 @@ pub struct ValidationResult {
 }
 
 pub fn load_manifest(path: &Path) -> Result<Manifest, String> {
-    let content = fs::read_to_string(path)
-        .map_err(|error| format!("ファイル読み込みエラー: {}", error))?;
+    let content =
+        fs::read_to_string(path).map_err(|error| format!("ファイル読み込みエラー: {}", error))?;
 
     serde_json::from_str::<Manifest>(&content)
         .map_err(|error| format!("JSON パースエラー: {}", error))
@@ -57,7 +57,10 @@ pub fn validate_manifest(manifest: &Manifest) -> ValidationResult {
         errors.push("contents が空です（最低 1 件必要）".to_string());
     }
 
-    if !matches!(manifest.install.method.as_str(), "copy" | "script" | "manual") {
+    if !matches!(
+        manifest.install.method.as_str(),
+        "copy" | "script" | "manual"
+    ) {
         errors.push(format!(
             "install.method '{}' は不正です（copy, script, manual のいずれか）",
             manifest.install.method
@@ -80,10 +83,7 @@ pub fn validate_contents(manifest: &Manifest, pack_root: &Path) -> Vec<String> {
     for entry in &manifest.contents {
         let file_path = pack_root.join(entry);
         if !file_path.exists() {
-            missing.push(format!(
-                "contents に記載された '{}' が存在しません",
-                entry
-            ));
+            missing.push(format!("contents に記載された '{}' が存在しません", entry));
         }
     }
 
@@ -165,7 +165,10 @@ mod tests {
         let result = validate_manifest(&manifest);
 
         assert!(!result.valid);
-        assert!(result.errors.iter().any(|error| error.contains("不正な文字")));
+        assert!(result
+            .errors
+            .iter()
+            .any(|error| error.contains("不正な文字")));
     }
 
     #[test]

@@ -56,10 +56,16 @@ fn render_header(frame: &mut Frame, area: Rect, pack: &CatalogEntry, theme: &The
         ]),
         Line::from(vec![
             Span::styled("Creator: ", Style::default().fg(theme.text_secondary)),
-            Span::styled(pack.author.name.as_str(), Style::default().fg(theme.text_primary)),
+            Span::styled(
+                pack.author.name.as_str(),
+                Style::default().fg(theme.text_primary),
+            ),
             Span::raw("  "),
             Span::styled("Updated: ", Style::default().fg(theme.text_secondary)),
-            Span::styled(pack.updated_at.as_str(), Style::default().fg(theme.text_primary)),
+            Span::styled(
+                pack.updated_at.as_str(),
+                Style::default().fg(theme.text_primary),
+            ),
         ]),
     ];
 
@@ -92,11 +98,7 @@ fn render_content(frame: &mut Frame, area: Rect, app: &App, pack: &CatalogEntry,
         permission_summary_line("shell", pack.permissions.shell, theme),
         permission_summary_line("network", pack.permissions.network, theme),
         permission_summary_line("filesystem_read", pack.permissions.filesystem_read, theme),
-        permission_summary_line(
-            "filesystem_write",
-            pack.permissions.filesystem_write,
-            theme,
-        ),
+        permission_summary_line("filesystem_write", pack.permissions.filesystem_write, theme),
         permission_summary_line("git", pack.permissions.git, theme),
     ];
 
@@ -133,16 +135,14 @@ fn render_content(frame: &mut Frame, area: Rect, app: &App, pack: &CatalogEntry,
 }
 
 fn render_footer(frame: &mut Frame, area: Rect, theme: &Theme) {
-    let paragraph = Paragraph::new(
-        "[s] 安全性詳細  [p] 購入案内  [b] 戻る  [j/k] スクロール",
-    )
-    .style(theme.footer_text_style())
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(theme.border_style())
-            .style(theme.panel_style()),
-    );
+    let paragraph = Paragraph::new("[s] 安全性詳細  [p] 購入案内  [b] 戻る  [j/k] スクロール")
+        .style(theme.footer_text_style())
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(theme.border_style())
+                .style(theme.panel_style()),
+        );
     frame.render_widget(paragraph, area);
 }
 

@@ -47,8 +47,7 @@ pub fn search_packs<'a>(catalog: &'a [CatalogEntry], query: &str) -> Vec<&'a Cat
         .filter(|p| {
             p.name.to_lowercase().contains(&q)
                 || p.summary.to_lowercase().contains(&q)
-                || p
-                    .description
+                || p.description
                     .as_ref()
                     .is_some_and(|d| d.to_lowercase().contains(&q))
         })

@@ -1,18 +1,21 @@
+use crossterm::{
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::prelude::*;
 use std::io;
 use std::time::Duration;
-use crossterm::{execute, terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen}};
-use ratatui::prelude::*;
 
-mod app;
-mod screen;
 mod action;
-mod event;
-mod discovery;
-mod clipboard;
+mod app;
 mod browser;
-mod error;
-mod models;
+mod clipboard;
 mod data;
+mod discovery;
+mod error;
+mod event;
+mod models;
+mod screen;
 mod ui;
 
 fn install_panic_hook() {
@@ -38,7 +41,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     result
 }
 
-fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<(), Box<dyn std::error::Error>> {
+fn run_app(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let data_dir = std::path::Path::new("data");
     let mut app = app::App::new(data_dir);
     let tick_rate = Duration::from_millis(250);

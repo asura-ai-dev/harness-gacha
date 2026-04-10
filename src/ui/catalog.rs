@@ -49,7 +49,11 @@ fn render_tab_bar(frame: &mut Frame, area: Rect, app: &App, theme: &Theme) {
     let tabs = Tabs::new(tab_titles)
         .select(selected)
         .style(theme.secondary_style())
-        .highlight_style(Style::default().fg(theme.accent).add_modifier(Modifier::BOLD))
+        .highlight_style(
+            Style::default()
+                .fg(theme.accent)
+                .add_modifier(Modifier::BOLD),
+        )
         .block(
             Block::default()
                 .borders(Borders::BOTTOM)

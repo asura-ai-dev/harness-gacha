@@ -19,11 +19,21 @@ impl Permissions {
     /// 有効な権限の一覧を返す
     pub fn enabled_list(&self) -> Vec<&str> {
         let mut list = Vec::new();
-        if self.shell { list.push("shell"); }
-        if self.network { list.push("network"); }
-        if self.filesystem_read { list.push("filesystem_read"); }
-        if self.filesystem_write { list.push("filesystem_write"); }
-        if self.git { list.push("git"); }
+        if self.shell {
+            list.push("shell");
+        }
+        if self.network {
+            list.push("network");
+        }
+        if self.filesystem_read {
+            list.push("filesystem_read");
+        }
+        if self.filesystem_write {
+            list.push("filesystem_write");
+        }
+        if self.git {
+            list.push("git");
+        }
         list
     }
 }

@@ -4,8 +4,9 @@ use crate::models::entitlement::{EntitlementEntry, EntitlementStore};
 
 pub fn load_entitlements(path: &Path) -> EntitlementStore {
     match std::fs::read_to_string(path) {
-        Ok(content) => serde_json::from_str::<EntitlementStore>(&content)
-            .unwrap_or_else(|_| default_store()),
+        Ok(content) => {
+            serde_json::from_str::<EntitlementStore>(&content).unwrap_or_else(|_| default_store())
+        }
         Err(_) => default_store(),
     }
 }

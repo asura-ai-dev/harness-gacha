@@ -1,6 +1,6 @@
+use crate::ui::theme::Theme;
 use ratatui::prelude::*;
 use ratatui::text::Span;
-use crate::ui::theme::Theme;
 
 pub fn permission_span<'a>(name: &'a str, enabled: bool, theme: &Theme) -> Span<'a> {
     let (label, color) = if !enabled {
@@ -12,10 +12,7 @@ pub fn permission_span<'a>(name: &'a str, enabled: bool, theme: &Theme) -> Span<
             _ => ("enabled", theme.text_secondary),
         }
     };
-    Span::styled(
-        format!("{}: {}", name, label),
-        Style::default().fg(color),
-    )
+    Span::styled(format!("{}: {}", name, label), Style::default().fg(color))
 }
 
 pub fn permission_line<'a>(name: &'a str, enabled: bool, theme: &Theme) -> Line<'a> {
@@ -33,7 +30,10 @@ pub fn permission_line<'a>(name: &'a str, enabled: bool, theme: &Theme) -> Line<
         style = style.add_modifier(Modifier::BOLD);
     }
     Line::from(vec![
-        Span::styled(format!("  {:<20}", name), Style::default().fg(theme.text_primary)),
+        Span::styled(
+            format!("  {:<20}", name),
+            Style::default().fg(theme.text_primary),
+        ),
         Span::styled(label.to_string(), style),
     ])
 }
@@ -49,10 +49,22 @@ pub fn permission_summary_text(
     let mut dangerous: Vec<&str> = Vec::new();
     let mut safe: Vec<&str> = Vec::new();
 
-    if shell { dangerous.push("shell"); } else { safe.push("shell"); }
-    if network { dangerous.push("network"); } else { safe.push("network"); }
-    if filesystem_write { dangerous.push("write"); }
-    if git { dangerous.push("git"); }
+    if shell {
+        dangerous.push("shell");
+    } else {
+        safe.push("shell");
+    }
+    if network {
+        dangerous.push("network");
+    } else {
+        safe.push("network");
+    }
+    if filesystem_write {
+        dangerous.push("write");
+    }
+    if git {
+        dangerous.push("git");
+    }
 
     if !dangerous.is_empty() {
         parts.push(Span::styled(
