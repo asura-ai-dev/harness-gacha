@@ -1,0 +1,38 @@
+{
+  "transactions": [
+    {
+      "pack_id": "team-review-pack",
+      "user_id": "local-user",
+      "amount": 1800,
+      "type": "purchase",
+      "timestamp": "2026-04-05T10:00:00Z",
+      "stripe_payment_id": "pi_example_001"
+    },
+    {
+      "pack_id": "frontend-spec-kit",
+      "user_id": "local-user",
+      "amount": 1200,
+      "type": "purchase",
+      "timestamp": "2026-04-08T14:30:00Z",
+      "stripe_payment_id": "pi_example_002"
+    },
+    {
+      "pack_id": "bug-triage-starter",
+      "user_id": "user-002",
+      "amount": 1500,
+      "type": "purchase",
+      "timestamp": "2026-04-09T09:00:00Z",
+      "stripe_payment_id": "pi_example_003"
+    }
+  ],
+  "creator_shares": {
+    "Example Creator": {
+      "share_rate": 0.7,
+      "packs": ["team-review-pack", "bug-triage-starter"]
+    },
+    "Frontend Labs": {
+      "share_rate": 0.6,
+      "packs": ["frontend-spec-kit"]
+    }
+  }
+}

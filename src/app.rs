@@ -1,0 +1,494 @@
+use crate::action::Action;
+use crate::data::{accounting, catalog, entitlement};
+use crate::discovery::pick_random_pack;
+use crate::models::{AccountingData, CatalogEntry, EntitlementStore};
+use crate::screen::Screen;
+use std::path::Path;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CatalogTab {
+    Featured,
+    Recent,
+    Recommended,
+}
+
+#[derive(Debug, Clone)]
+pub enum DiscoveryState {
+    Idle,
+    Animating { frame: u8, target_pack_id: String },
+    Result { pack_id: String },
+}
+
+#[derive(Debug)]
+pub struct CatalogState {
+    pub current_tab: CatalogTab,
+    pub selected_index: usize,
+    pub filtered_ids: Vec<String>,
+    pub active_tag: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct LibraryState {
+    pub selected_index: usize,
+}
+
+pub struct App {
+    pub running: bool,
+    pub current_screen: Screen,
+    pub screen_stack: Vec<Screen>,
+    pub catalog: Vec<CatalogEntry>,
+    pub entitlements: EntitlementStore,
+    pub accounting: AccountingData,
+    pub catalog_state: CatalogState,
+    pub discovery_state: DiscoveryState,
+    pub library_state: LibraryState,
+    pub selected_pack_id: Option<String>,
+    pub search_query: String,
+    pub search_active: bool,
+    pub tick_count: u64,
+    pub scroll_offset: u16,
+    pub message: Option<String>,
+    pub message_clear_at: Option<u64>,
+}
+
+impl App {
+    pub fn new(data_dir: &Path) -> Self {
+        let catalog = catalog::load_catalog(&data_dir.join("catalog.json"));
+        let entitlements = entitlement::load_entitlements(&data_dir.join("entitlements.json"));
+        let accounting_data = accounting::load_accounting(&data_dir.join("accounting.json"));
+        let filtered_ids: Vec<String> = catalog
+            .iter()
+            .filter(|p| p.featured && p.status == "listed")
+            .map(|p| p.id.clone())
+            .collect();
+        let message = if catalog.is_empty() {
+            Some(
+                "カタログデータが見つかりません。data/catalog.json を確認してください。"
+                    .to_string(),
+            )
+        } else {
+            None
+        };
+        App {
+            running: true,
+            current_screen: Screen::Catalog,
+            screen_stack: Vec::new(),
+            catalog,
+            entitlements,
+            accounting: accounting_data,
+            catalog_state: CatalogState {
+                current_tab: CatalogTab::Featured,
+                selected_index: 0,
+                filtered_ids,
+                active_tag: None,
+            },
+            discovery_state: DiscoveryState::Idle,
+            library_state: LibraryState { selected_index: 0 },
+            selected_pack_id: None,
+            search_query: String::new(),
+            search_active: false,
+            tick_count: 0,
+            scroll_offset: 0,
+            message,
+            message_clear_at: None,
+        }
+    }
+
+    pub fn navigate_to(&mut self, screen: Screen) {
+        self.screen_stack.push(self.current_screen);
+        self.current_screen = screen;
+        self.scroll_offset = 0;
+    }
+
+    pub fn go_back(&mut self) {
+        if let Some(prev) = self.screen_stack.pop() {
+            self.current_screen = prev;
+            self.scroll_offset = 0;
+        }
+    }
+
+    pub fn refresh_filtered_ids(&mut self) {
+        let tag_filter = self.catalog_state.active_tag.clone();
+        let query = self.search_query.to_lowercase();
+
+        let base_iter = self.catalog.iter().filter(|p| p.status == "listed");
+
+        let tab_filtered: Vec<&CatalogEntry> = match self.catalog_state.current_tab {
+            CatalogTab::Featured => base_iter.filter(|p| p.featured).collect(),
+            CatalogTab::Recent => {
+                let mut v: Vec<&CatalogEntry> = base_iter.collect();
+                v.sort_by(|a, b| b.listed_at.cmp(&a.listed_at));
+                v
+            }
+            CatalogTab::Recommended => base_iter.collect(),
+        };
+
+        self.catalog_state.filtered_ids = tab_filtered
+            .into_iter()
+            .filter(|p| {
+                if let Some(ref tag) = tag_filter {
+                    p.tags.as_ref().map_or(false, |tags| tags.contains(tag))
+                } else {
+                    true
+                }
+            })
+            .filter(|p| matches_search_query(p, &query))
+            .map(|p| p.id.clone())
+            .collect();
+
+        self.catalog_state.selected_index = 0;
+    }
+
+    pub fn update(&mut self, action: Action) {
+        match action {
+            Action::Quit => self.running = false,
+            Action::Back => {
+                if self.current_screen == Screen::Discovery {
+                    if let DiscoveryState::Animating { .. } = &self.discovery_state {
+                        return;
+                    }
+                    self.discovery_state = DiscoveryState::Idle;
+                }
+                self.go_back();
+            }
+            Action::Tick => {
+                self.tick_count += 1;
+                if self
+                    .message_clear_at
+                    .is_some_and(|clear_at| self.tick_count >= clear_at)
+                {
+                    self.message = None;
+                    self.message_clear_at = None;
+                }
+                self.handle_screen_action(Action::Tick);
+            }
+            _ => self.handle_screen_action(action),
+        }
+    }
+
+    fn handle_screen_action(&mut self, action: Action) {
+        match self.current_screen {
+            Screen::Catalog => self.handle_catalog_action(action),
+            Screen::Discovery => self.handle_discovery_action(action),
+            Screen::Library => self.handle_library_action(action),
+            Screen::PackDetail => match action {
+                Action::OpenSafety => self.navigate_to(Screen::SafetyDetail),
+                Action::OpenPurchase => self.navigate_to(Screen::Purchase),
+                Action::Up => {
+                    self.scroll_offset = self.scroll_offset.saturating_sub(1);
+                }
+                Action::Down => {
+                    self.scroll_offset = self.scroll_offset.saturating_add(1);
+                }
+                _ => {}
+            },
+            Screen::SafetyDetail => match action {
+                Action::OpenPurchase => self.navigate_to(Screen::Purchase),
+                _ => {}
+            },
+            Screen::Purchase => match action {
+                Action::Enter => {
+                    if let Some(id) = &self.selected_pack_id {
+                        if let Some(pack) = crate::data::catalog::find_pack_by_id(&self.catalog, id)
+                        {
+                            match crate::browser::open_url(&pack.checkout_url) {
+                                Ok(_) => self.set_temporary_message("ブラウザを起動しました"),
+                                Err(error) => self.set_temporary_message(error),
+                            }
+                        }
+                    }
+                }
+                Action::CopyUrl => {
+                    if let Some(id) = &self.selected_pack_id {
+                        if let Some(pack) = crate::data::catalog::find_pack_by_id(&self.catalog, id)
+                        {
+                            match crate::clipboard::copy_to_clipboard(&pack.checkout_url) {
+                                Ok(_) => self.set_temporary_message("URL をコピーしました"),
+                                Err(error) => self.set_temporary_message(error),
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            },
+            Screen::InstallDetail => match action {
+                Action::Up => {
+                    self.scroll_offset = self.scroll_offset.saturating_sub(1);
+                }
+                Action::Down => {
+                    self.scroll_offset = self.scroll_offset.saturating_add(1);
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
+    fn handle_library_action(&mut self, action: Action) {
+        match action {
+            Action::Up => {
+                if self.library_state.selected_index > 0 {
+                    self.library_state.selected_index -= 1;
+                }
+            }
+            Action::Down => {
+                let max = self.active_entitlement_count().saturating_sub(1);
+                if self.library_state.selected_index < max {
+                    self.library_state.selected_index += 1;
+                }
+            }
+            Action::Enter => {
+                let selected_pack_id = {
+                    let active = entitlement::active_entitlements(&self.entitlements);
+                    active
+                        .get(self.library_state.selected_index)
+                        .map(|ent| ent.pack_id.clone())
+                };
+
+                if let Some(pack_id) = selected_pack_id {
+                    self.selected_pack_id = Some(pack_id);
+                    self.navigate_to(Screen::InstallDetail);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_catalog_action(&mut self, action: Action) {
+        match action {
+            Action::Up => {
+                if self.catalog_state.selected_index > 0 {
+                    self.catalog_state.selected_index -= 1;
+                }
+            }
+            Action::Down => {
+                let max = self.catalog_state.filtered_ids.len().saturating_sub(1);
+                if self.catalog_state.selected_index < max {
+                    self.catalog_state.selected_index += 1;
+                }
+            }
+            Action::Tab => {
+                self.catalog_state.current_tab = match self.catalog_state.current_tab {
+                    CatalogTab::Featured => CatalogTab::Recent,
+                    CatalogTab::Recent => CatalogTab::Recommended,
+                    CatalogTab::Recommended => CatalogTab::Featured,
+                };
+                self.refresh_filtered_ids();
+            }
+            Action::BackTab => {
+                self.catalog_state.current_tab = match self.catalog_state.current_tab {
+                    CatalogTab::Featured => CatalogTab::Recommended,
+                    CatalogTab::Recent => CatalogTab::Featured,
+                    CatalogTab::Recommended => CatalogTab::Recent,
+                };
+                self.refresh_filtered_ids();
+            }
+            Action::Enter => {
+                if let Some(id) = self
+                    .catalog_state
+                    .filtered_ids
+                    .get(self.catalog_state.selected_index)
+                {
+                    self.selected_pack_id = Some(id.clone());
+                    self.navigate_to(Screen::PackDetail);
+                }
+            }
+            Action::ToggleDiscovery => {
+                self.discovery_state = DiscoveryState::Idle;
+                self.navigate_to(Screen::Discovery);
+            }
+            Action::OpenLibrary => {
+                self.navigate_to(Screen::Library);
+            }
+            Action::OpenHelp => {
+                self.navigate_to(Screen::Help);
+            }
+            Action::Search => {
+                self.search_active = !self.search_active;
+                if !self.search_active {
+                    self.refresh_filtered_ids();
+                }
+            }
+            Action::SearchInput(c) => {
+                if self.search_active {
+                    self.search_query.push(c);
+                    self.refresh_filtered_ids();
+                }
+            }
+            Action::SearchBackspace => {
+                if self.search_active {
+                    self.search_query.pop();
+                    self.refresh_filtered_ids();
+                }
+            }
+            Action::ToggleTag => {
+                let tags = crate::data::catalog::all_tags(&self.catalog);
+                if tags.is_empty() {
+                    return;
+                }
+                self.catalog_state.active_tag = match &self.catalog_state.active_tag {
+                    None => Some(tags[0].clone()),
+                    Some(current) => {
+                        if let Some(pos) = tags.iter().position(|t| t == current) {
+                            if pos + 1 < tags.len() {
+                                Some(tags[pos + 1].clone())
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    }
+                };
+                self.catalog_state.selected_index = 0;
+                self.refresh_filtered_ids();
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_discovery_action(&mut self, action: Action) {
+        match action {
+            Action::Enter => match &self.discovery_state {
+                DiscoveryState::Idle => self.start_discovery_animation(),
+                DiscoveryState::Animating { target_pack_id, .. } => {
+                    self.discovery_state = DiscoveryState::Result {
+                        pack_id: target_pack_id.clone(),
+                    };
+                }
+                DiscoveryState::Result { pack_id } => {
+                    self.selected_pack_id = Some(pack_id.clone());
+                    self.navigate_to(Screen::PackDetail);
+                }
+            },
+            Action::ToggleDiscovery => self.start_discovery_animation(),
+            Action::Tick => {
+                if let DiscoveryState::Animating {
+                    frame,
+                    target_pack_id,
+                } = &self.discovery_state
+                {
+                    let next_frame = frame.saturating_add(1);
+                    if next_frame >= crate::ui::widgets::capsule_machine::TOTAL_FRAMES {
+                        self.discovery_state = DiscoveryState::Result {
+                            pack_id: target_pack_id.clone(),
+                        };
+                    } else {
+                        self.discovery_state = DiscoveryState::Animating {
+                            frame: next_frame,
+                            target_pack_id: target_pack_id.clone(),
+                        };
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn active_entitlement_count(&self) -> usize {
+        entitlement::active_entitlements(&self.entitlements).len()
+    }
+
+    fn start_discovery_animation(&mut self) {
+        if let Some(pack_id) = pick_random_pack(&self.catalog) {
+            self.discovery_state = DiscoveryState::Animating {
+                frame: 0,
+                target_pack_id: pack_id,
+            };
+        } else {
+            self.discovery_state = DiscoveryState::Idle;
+            self.message = Some("表示可能な pack がありません。".to_string());
+        }
+    }
+
+    fn set_temporary_message(&mut self, message: impl Into<String>) {
+        self.message = Some(message.into());
+        self.message_clear_at = Some(self.tick_count + 8);
+    }
+}
+
+fn matches_search_query(pack: &CatalogEntry, query: &str) -> bool {
+    if query.is_empty() {
+        return true;
+    }
+
+    pack.name.to_lowercase().contains(query)
+        || pack.summary.to_lowercase().contains(query)
+        || pack
+            .description
+            .as_ref()
+            .is_some_and(|description| description.to_lowercase().contains(query))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::matches_search_query;
+    use crate::models::catalog_entry::{
+        Author, CatalogEntry, ContentsSummary, InstallInfo, LicenseInfo, Target,
+    };
+    use crate::models::permissions::Permissions;
+
+    fn sample_pack() -> CatalogEntry {
+        CatalogEntry {
+            id: "sample-pack".to_string(),
+            name: "Team Review Pack".to_string(),
+            version: "1.0.0".to_string(),
+            summary: "レビュー導線を整える pack".to_string(),
+            description: Some("大規模リファクタの安全確認に向いた説明文".to_string()),
+            author: Author {
+                name: "Example Creator".to_string(),
+                url: None,
+                email: None,
+            },
+            targets: vec![Target {
+                tool: "codex".to_string(),
+                version_range: ">=0.9.0".to_string(),
+            }],
+            contents_summary: ContentsSummary {
+                skills: 1,
+                hooks: 0,
+                templates: 0,
+                other: 0,
+            },
+            permissions: Permissions {
+                shell: false,
+                network: false,
+                filesystem_read: true,
+                filesystem_write: false,
+                git: false,
+            },
+            install: InstallInfo {
+                method: "manual".to_string(),
+                entrypoint: None,
+                steps: None,
+            },
+            license: LicenseInfo {
+                license_type: "commercial".to_string(),
+                text_url: None,
+                spdx: None,
+            },
+            tags: None,
+            risks: None,
+            price: 1200,
+            status: "listed".to_string(),
+            featured: true,
+            listed_at: "2026-04-01T00:00:00Z".to_string(),
+            updated_at: "2026-04-01T00:00:00Z".to_string(),
+            sample_preview: None,
+            checkout_url: "https://example.com/checkout".to_string(),
+            review_notes: None,
+        }
+    }
+
+    #[test]
+    fn search_matches_description_text() {
+        assert!(matches_search_query(&sample_pack(), "リファクタ"));
+    }
+
+    #[test]
+    fn search_is_case_insensitive_for_name_and_summary() {
+        let pack = sample_pack();
+        assert!(matches_search_query(&pack, "team"));
+        assert!(matches_search_query(&pack, "レビュー"));
+    }
+}
