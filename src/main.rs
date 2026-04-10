@@ -4,6 +4,7 @@ use crossterm::{
 };
 use ratatui::prelude::*;
 use std::io;
+use std::path::PathBuf;
 use std::time::Duration;
 
 mod action;
@@ -44,8 +45,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let data_dir = std::path::Path::new("data");
-    let mut app = app::App::new(data_dir);
+    let data_dir = resolve_data_dir();
+    let mut app = app::App::new(&data_dir);
     let tick_rate = Duration::from_millis(250);
     while app.running {
         terminal.draw(|frame| ui::render::render(frame, &app))?;
@@ -53,4 +54,28 @@ fn run_app(
         app.update(action);
     }
     Ok(())
+}
+
+fn resolve_data_dir() -> PathBuf {
+    std::env::var_os("HARNESS_GACHA_DATA_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(default_data_dir)
+}
+
+fn default_data_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::default_data_dir;
+    use std::path::PathBuf;
+
+    #[test]
+    fn default_data_dir_points_to_repo_data() {
+        assert_eq!(
+            default_data_dir(),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data")
+        );
+    }
 }

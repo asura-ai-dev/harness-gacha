@@ -132,14 +132,7 @@ impl App {
                     true
                 }
             })
-            .filter(|p| {
-                if query.is_empty() {
-                    true
-                } else {
-                    p.name.to_lowercase().contains(&query)
-                        || p.summary.to_lowercase().contains(&query)
-                }
-            })
+            .filter(|p| matches_search_query(p, &query))
             .map(|p| p.id.clone())
             .collect();
 
@@ -411,5 +404,91 @@ impl App {
     fn set_temporary_message(&mut self, message: impl Into<String>) {
         self.message = Some(message.into());
         self.message_clear_at = Some(self.tick_count + 8);
+    }
+}
+
+fn matches_search_query(pack: &CatalogEntry, query: &str) -> bool {
+    if query.is_empty() {
+        return true;
+    }
+
+    pack.name.to_lowercase().contains(query)
+        || pack.summary.to_lowercase().contains(query)
+        || pack
+            .description
+            .as_ref()
+            .is_some_and(|description| description.to_lowercase().contains(query))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::matches_search_query;
+    use crate::models::catalog_entry::{
+        Author, CatalogEntry, ContentsSummary, InstallInfo, LicenseInfo, Target,
+    };
+    use crate::models::permissions::Permissions;
+
+    fn sample_pack() -> CatalogEntry {
+        CatalogEntry {
+            id: "sample-pack".to_string(),
+            name: "Team Review Pack".to_string(),
+            version: "1.0.0".to_string(),
+            summary: "レビュー導線を整える pack".to_string(),
+            description: Some("大規模リファクタの安全確認に向いた説明文".to_string()),
+            author: Author {
+                name: "Example Creator".to_string(),
+                url: None,
+                email: None,
+            },
+            targets: vec![Target {
+                tool: "codex".to_string(),
+                version_range: ">=0.9.0".to_string(),
+            }],
+            contents_summary: ContentsSummary {
+                skills: 1,
+                hooks: 0,
+                templates: 0,
+                other: 0,
+            },
+            permissions: Permissions {
+                shell: false,
+                network: false,
+                filesystem_read: true,
+                filesystem_write: false,
+                git: false,
+            },
+            install: InstallInfo {
+                method: "manual".to_string(),
+                entrypoint: None,
+                steps: None,
+            },
+            license: LicenseInfo {
+                license_type: "commercial".to_string(),
+                text_url: None,
+                spdx: None,
+            },
+            tags: None,
+            risks: None,
+            price: 1200,
+            status: "listed".to_string(),
+            featured: true,
+            listed_at: "2026-04-01T00:00:00Z".to_string(),
+            updated_at: "2026-04-01T00:00:00Z".to_string(),
+            sample_preview: None,
+            checkout_url: "https://example.com/checkout".to_string(),
+            review_notes: None,
+        }
+    }
+
+    #[test]
+    fn search_matches_description_text() {
+        assert!(matches_search_query(&sample_pack(), "リファクタ"));
+    }
+
+    #[test]
+    fn search_is_case_insensitive_for_name_and_summary() {
+        let pack = sample_pack();
+        assert!(matches_search_query(&pack, "team"));
+        assert!(matches_search_query(&pack, "レビュー"));
     }
 }
